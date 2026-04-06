@@ -305,12 +305,13 @@ class IndexingRepository {
     final catalogueOrder =
         catalogueOrderByBookKey[catalogueOrderKey(book)] ?? 0xFFFFFFFF;
 
+    // שימוש ב-upsertDocument במקום addDocument כדי לעדכן מסמכים קיימים
     for (final document in documents) {
       if (!_tantivyDataProvider.isIndexing.value) {
         return;
       }
 
-      await index.addDocument(
+      await index.upsertDocument(
         id: buildCatalogueDocumentId(
           catalogueOrder: catalogueOrder,
           ordinal: document.ordinal,
@@ -361,7 +362,10 @@ class IndexingRepository {
 
   String _buildTopicsPath(Book book) {
     final topics = "/${book.topics.replaceAll(', ', '/')}";
-    return '$topics/${book.title}';
+    // שימוש ב-catalogueOrderKey במקום title כדי להבטיח ייחודיות
+    // זה מאפשר הבחנה בין ספרים עם אותו שם
+    final bookKey = catalogueOrderKey(book);
+    return '$topics/$bookKey';
   }
 
   /// Cancels the ongoing indexing process.

@@ -87,10 +87,12 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     final booksToSearch = state.booksToSearch.map((e) => e.title).toList();
 
     try {
-      final results = await _repository.searchTexts(
+      // שימוש ב-streaming לתוצאות מהירות יותר
+      final stream = _repository.searchTextsStream(
         SearchQueryBuilder.sanitizeQuery(query),
         requestedFacets,
         state.numResults,
+        chunkSize: 50, // 50 תוצאות בכל chunk
         fuzzy: state.fuzzy,
         distance: state.distance,
         order: state.sortBy,
@@ -99,32 +101,61 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         searchOptions: event.searchOptions,
       );
 
-      // אם אין תוצאות ב-facets שנבחרו - לא עושים fallback אוטומטי ל-"/"
-      // המשתמש בחר קטגוריות ספציפיות ויש לכבד את הבחירה
+      final allResults = <SearchResult>[];
+      bool isFirstChunk = true;
+
+      await for (final chunk in stream) {
+        if (requestId != _searchRequestId) {
+          return; // החיפוש בוטל
+        }
+
+        allResults.addAll(chunk);
+
+        // עדכון ה-UI עם כל chunk
+        if (isFirstChunk) {
+          // Chunk ראשון - בנה ספירות חלקיות
+          isFirstChunk = false;
+          final library = await DataRepository.instance.library;
+          final bookByTitle = <String, Book>{};
+          for (final book in library.getAllBooks()) {
+            bookByTitle.putIfAbsent(book.title, () => book);
+          }
+          final partialFacetCounts =
+              FacetHelper.buildFacetCountsFromResults(allResults, bookByTitle);
+
+          emit(state.copyWith(
+            results: List.from(allResults),
+            totalResults: allResults.length,
+            isLoading: true, // עדיין טוען
+            facetCounts: shouldPreserveFacetCounts
+                ? state.facetCounts
+                : partialFacetCounts,
+          ));
+        } else {
+          // Chunks נוספים - רק עדכן תוצאות
+          emit(state.copyWith(
+            results: List.from(allResults),
+            totalResults: allResults.length,
+            isLoading: true, // עדיין טוען
+          ));
+        }
+      }
+
+      // סיום - כל התוצאות התקבלו
       if (requestId != _searchRequestId) {
         return;
       }
-      // בנה ספירות חלקיות מיידיות מהתוצאות שכבר יש - הרשימה הצדדית תופיע מיד
-      Map<String, int> partialFacetCounts = const {};
-      if (!shouldPreserveFacetCounts && results.isNotEmpty) {
-        final library = await DataRepository.instance.library;
-        final bookByTitle = <String, Book>{};
-        for (final book in library.getAllBooks()) {
-          bookByTitle.putIfAbsent(book.title, () => book);
-        }
-        partialFacetCounts = FacetHelper.buildFacetCountsFromResults(results, bookByTitle);
-      }
 
       emit(state.copyWith(
-        results: results,
-        totalResults: results.length,
+        results: allResults,
+        totalResults: allResults.length,
         isLoading: false,
-        facetCounts: shouldPreserveFacetCounts ? state.facetCounts : partialFacetCounts,
       ));
 
-      // הפעל את שניהם במקביל - אל תחכה ל-countTexts לפני שמתחילים facet refresh
+      // הפעל רענון ספירות facets במקביל
       unawaited(_refreshFacetCountsForAllBooks(event, requestId));
 
+      // ספירה כוללת (אם צריך - אבל בעצם allResults.length כבר נותן את זה)
       final totalResults = await TantivyDataProvider.instance.countTexts(
         SearchQueryBuilder.sanitizeQuery(query),
         booksToSearch,
@@ -142,10 +173,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       emit(state.copyWith(
         totalResults: totalResults,
       ));
-
-      // Prefetch disabled - too slow and causes duplicates
-      // _prefetchCommonFacetCounts(event.query, event.customSpacing,
-      //     event.alternativeWords, event.searchOptions);
     } catch (e) {
       emit(state.copyWith(
         results: [],

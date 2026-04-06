@@ -159,7 +159,15 @@ class TextBookSearchViewState extends State<TextBookSearchView>
       if (!mounted) return;
 
       debugPrint('📚 TextBookSearch: final topics = "$topics"');
-      _bookPath = BookFacet.buildFacetPath(title: bookTitle, topics: topics);
+      _bookPath = BookFacet.buildFacetPath(
+        title: bookTitle,
+        topics: topics,
+        bookId: state.book.id,
+        externalLibraryId: state.book.externalLibraryId,
+        categoryPath: state.book.categoryPath,
+        fileType: state.book.fileType,
+        filePath: state.book.filePath,
+      );
       debugPrint('📚 TextBookSearch: _bookPath = $_bookPath');
       if (searchTextController.text.isNotEmpty) {
         _runInitialSearch();

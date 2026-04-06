@@ -379,6 +379,7 @@ class TantivyDataProvider {
               .search(
                   regexTerms: ['a'],
                   limit: 10,
+                  offset: 0,
                   slop: 0,
                   maxExpansions: 10,
                   facets: ["/"],

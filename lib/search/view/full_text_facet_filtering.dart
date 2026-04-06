@@ -126,8 +126,8 @@ class _SearchFacetFilteringState extends State<SearchFacetFiltering>
 
   int _getBookFacetCount(Book book, Map<String, int> counts) {
     final categoryPath = FacetHelper.resolveCategoryPath(book);
-    final bookFacet = FacetHelper.buildBookFacet(categoryPath, book.title);
-    return counts[bookFacet] ?? counts['/${book.title}'] ?? 0;
+    final bookFacet = FacetHelper.buildBookFacet(categoryPath, book);
+    return counts[bookFacet] ?? 0;
   }
 
   Widget _buildBookTile(
@@ -141,10 +141,10 @@ class _SearchFacetFilteringState extends State<SearchFacetFiltering>
       return const SizedBox.shrink();
     }
 
-    // בניית facet בהתאם לפורמט האינדקס: /<topics>/<title>
+    // בניית facet בהתאם לפורמט האינדקס: /<topics>/<bookKey>
     final resolvedCategoryPath =
         categoryPath ?? FacetHelper.resolveCategoryPath(book);
-    final facet = FacetHelper.buildBookFacet(resolvedCategoryPath, book.title);
+    final facet = FacetHelper.buildBookFacet(resolvedCategoryPath, book);
     final isSelected = state.currentFacets.contains(facet);
     return InkWell(
       onTap: () => HardwareKeyboard.instance.isControlPressed
@@ -438,9 +438,8 @@ class _SearchFacetFilteringState extends State<SearchFacetFiltering>
     // הוספת ספרים
     for (final book in filteredBooks) {
       final categoryPath = category.path;
-      final fullFacet = FacetHelper.buildBookFacet(categoryPath, book.title);
-      final titleOnlyFacet = '/${book.title}';
-      final count = facetCounts[fullFacet] ?? facetCounts[titleOnlyFacet] ?? 0;
+      final fullFacet = FacetHelper.buildBookFacet(categoryPath, book);
+      final count = facetCounts[fullFacet] ?? 0;
       children.add(
         _buildBookTile(
           book,

@@ -130,7 +130,12 @@ class _PdfBookSearchViewState extends State<PdfBookSearchView> {
 
     if (!mounted) return;
 
-    _bookPath = BookFacet.buildFacetPath(title: title, topics: topics);
+    _bookPath = BookFacet.buildFacetPath(
+      title: title,
+      topics: topics,
+      fileType: 'pdf',
+      filePath: widget.pdfFilePath,
+    );
 
     if (widget.searchController.text.isNotEmpty && mounted) {
       _searchTextUpdated();

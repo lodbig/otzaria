@@ -20,12 +20,30 @@ class FacetHelper {
     return null;
   }
 
-  /// Builds a book facet path from category path and title
-  static String buildBookFacet(String? categoryPath, String title) {
+  /// Builds a book facet path from category path and book
+  /// Uses catalogueOrderKey for uniqueness instead of title
+  static String buildBookFacet(String? categoryPath, Book book) {
+    final bookKey = _buildBookKey(book);
     if (categoryPath == null || categoryPath.isEmpty || categoryPath == '/') {
-      return '/$title';
+      return '/$bookKey';
     }
-    return '$categoryPath/$title';
+    return '$categoryPath/$bookKey';
+  }
+
+  /// Builds a unique key for a book (same logic as IndexingRepository.catalogueOrderKey)
+  static String _buildBookKey(Book book) {
+    if (book.externalLibraryId != null && book.externalLibraryId!.isNotEmpty) {
+      return 'ext:${book.externalLibraryId}';
+    }
+
+    if (book.id != null) {
+      return 'id:${book.id}';
+    }
+
+    final categoryKey = book.category?.path ?? book.categoryPath ?? '';
+    final fileTypeKey = book.fileType ?? book.runtimeType.toString();
+    final pathKey = book is FileBook ? book.path : (book.filePath ?? '');
+    return '${book.title}|$categoryKey|$fileTypeKey|$pathKey';
   }
 
   /// Increments a facet count in the given map
@@ -65,16 +83,18 @@ class FacetHelper {
     for (final result in results) {
       final title = result.title;
       final book = bookByTitle[title];
-      final categoryPath = book != null ? resolveCategoryPath(book) : null;
-      final bookFacet = buildBookFacet(categoryPath, title);
 
-      incrementFacet(counts, bookFacet);
-      incrementFacet(counts, '/$title');
+      if (book != null) {
+        final categoryPath = resolveCategoryPath(book);
+        final bookFacet = buildBookFacet(categoryPath, book);
 
-      if (categoryPath != null && categoryPath.isNotEmpty) {
-        incrementFacetWithAncestors(counts, categoryPath);
-      } else {
-        incrementFacet(counts, '/');
+        incrementFacet(counts, bookFacet);
+
+        if (categoryPath != null && categoryPath.isNotEmpty) {
+          incrementFacetWithAncestors(counts, categoryPath);
+        } else {
+          incrementFacet(counts, '/');
+        }
       }
     }
 

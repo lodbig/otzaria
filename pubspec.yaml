@@ -75,13 +75,13 @@ dependencies:
   search_engine:
     #path: ../search_engine
     git:
-      url: https://github.com/Sivan22/otzaria_search_engine
+      url: https://github.com/Y-PLONI/otzaria_search_engine
       ref: use-regex
   window_manager: ^0.5.1
   flutter_spinbox: ^0.13.1
   toggle_switch: ^2.3.0
   logging: ^1.3.0
-  sqlite3: ^3.2.0
+  sqlite3: ^3.3.0
   shared_preferences: ^2.5.5
   super_clipboard: ^0.9.1
   flutter_local_notifications: ^21.0.0

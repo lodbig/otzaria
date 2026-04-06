@@ -5,7 +5,6 @@ import 'package:flutter_settings_screens/flutter_settings_screens.dart';
 import 'package:otzaria/models/books.dart';
 import 'package:otzaria/search/bloc/search_bloc.dart';
 import 'package:otzaria/search/bloc/search_state.dart';
-import 'package:otzaria/search/bloc/search_event.dart';
 import 'package:otzaria/search/models/search_configuration.dart';
 import 'package:otzaria/search/utils/snippet_builder.dart';
 import 'package:otzaria/settings/settings_exports.dart';
@@ -84,7 +83,7 @@ class _TantivySearchResultsState extends State<TantivySearchResults> {
   }
 
   Widget _buildResultsContent(SearchState state, BoxConstraints constrains) {
-    // חשוב: בעת טעינת "עוד תוצאות" אנחנו לא רוצים לפרק את ה-ListView,
+    // חשוב: בעת טעינה אנחנו לא רוצים לפרק את ה-ListView,
     // אחרת הגלילה מתאפסת לראש. לכן ספינר מרכזי מוצג רק כשאין עדיין תוצאות.
     if (state.isLoading && state.results.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -92,7 +91,7 @@ class _TantivySearchResultsState extends State<TantivySearchResults> {
     if (state.searchQuery.isEmpty) {
       return const Center(child: Text("לא בוצע חיפוש"));
     }
-    if (state.results.isEmpty) {
+    if (state.results.isEmpty && !state.isLoading) {
       return const Center(
           child: Padding(
         padding: EdgeInsets.all(8.0),
@@ -101,49 +100,24 @@ class _TantivySearchResultsState extends State<TantivySearchResults> {
     }
 
     // תמיד נשתמש ב-ListView גם לתוצאה אחת - כך היא תופיע למעלה
-    // +1 לכפתור "טען תוצאות נוספות" אם יש עוד תוצאות
-    final hasMoreResults = state.results.length < state.totalResults;
+    // +1 לאינדיקטור טעינה אם עדיין טוען
     return ListView.builder(
       key: PageStorageKey(widget.tab),
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: state.results.length + (hasMoreResults ? 1 : 0),
+      itemCount: state.results.length + (state.isLoading ? 1 : 0),
       itemBuilder: (context, index) {
-        // אם זה האיטם האחרון והוא כפתור "טען עוד"
+        // אם זה האיטם האחרון והוא אינדיקטור טעינה
         if (index == state.results.length) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16.0),
             child: Center(
-              child: ElevatedButton.icon(
-                onPressed: state.isLoading
-                    ? null
-                    : () {
-                        context.read<SearchBloc>().add(
-                              LoadMoreResults(
-                                customSpacing: widget.tab.spacingValues,
-                                alternativeWords: widget.tab.alternativeWords,
-                                searchOptions: widget.tab.searchOptions,
-                              ),
-                            );
-                      },
-                icon: state.isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(FluentIcons.arrow_download_24_regular),
-                label: Text(
-                  state.isLoading
-                      ? 'טוען...'
-                      : 'טען תוצאות נוספות (${state.totalResults - state.results.length} נותרו)',
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
+              child: Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 8),
+                  Text('טוען תוצאות נוספות...'),
+                ],
               ),
             ),
           );

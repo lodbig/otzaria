@@ -13,10 +13,29 @@ class BookFacet {
   }
 
   static String buildFacetPath(
-      {required String title, required String topics}) {
-    final cleanTitle = title.trim();
+      {required String title,
+      required String topics,
+      String? externalLibraryId,
+      int? bookId,
+      String? categoryPath,
+      String? fileType,
+      String? filePath}) {
     final topicsPath = topicsToPath(topics);
-    return topicsPath.isEmpty ? '/$cleanTitle' : '$topicsPath/$cleanTitle';
+
+    // בניית מפתח ייחודי לספר (אותה לוגיקה כמו IndexingRepository.catalogueOrderKey)
+    String bookKey;
+    if (externalLibraryId != null && externalLibraryId.isNotEmpty) {
+      bookKey = 'ext:$externalLibraryId';
+    } else if (bookId != null) {
+      bookKey = 'id:$bookId';
+    } else {
+      final categoryKey = categoryPath ?? '';
+      final fileTypeKey = fileType ?? '';
+      final pathKey = filePath ?? '';
+      bookKey = '$title|$categoryKey|$fileTypeKey|$pathKey';
+    }
+
+    return topicsPath.isEmpty ? '/$bookKey' : '$topicsPath/$bookKey';
   }
 
   static Future<String> resolveTopics({
